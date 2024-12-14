@@ -50,3 +50,15 @@ APP_INSIGHTS_NAME=hvalfangstappinsights
 ## Deallocate resources
 
 The shell script [deallocate_resources](infra/deallocate_resources.sh) deletes our Azure service bus queue, namespace and resource group.
+
+# CI/CD
+
+A CI/CD pipeline for deploying our [Function App](hvalfangst_function/function_app.py) to Azure has been set up using a GitHub Actions workflows [script](.github/workflows/deploy_to_azure.yml). The pipeline is either triggered by a push to the main branch or by manually running the workflow. 
+In order for the pipeline to work, the following secrets must be set in the repository settings:
+
+![img.png](img.png)
+
+The associated values of the aforementioned secret can be retrieved from the Azure portal, under our deployed Function App.
+Click on the **Get publish profile** button and copy/paste the file content into the secret value field.
+
+![img_1.png](img_1.png)

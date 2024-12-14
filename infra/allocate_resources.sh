@@ -60,7 +60,7 @@ az appservice plan create \
   --name "$SERVICE_PLAN_NAME" \
   --resource-group "$RESOURCE_GROUP_NAME" \
   --location "$LOCATION" \
-  --sku B1 \
+  --sku S1 \
   --is-linux
 if [ $? -ne 0 ]; then
   echo "Failed to create App Service Plan: $SERVICE_PLAN_NAME."
