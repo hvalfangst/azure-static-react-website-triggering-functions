@@ -10,8 +10,8 @@
 
 ## Allocate resources
 
-The shell script [allocate_resources](infra/allocate_resources.sh) creates Azure resources by calling the Azure CLI, which in turn
-makes HTTP calls to the resource-specific API on Azure. 
+The shell script [allocate_resources](infra/allocate_resources.sh) creates Azure resources specified in a
+[Bicep](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/overview?tabs=bicep) template [file](infra/main.bicep).
 
 It will create the following hierarchy of resources:
 
