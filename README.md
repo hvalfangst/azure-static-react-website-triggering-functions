@@ -1,9 +1,17 @@
-# Python API integrated with Azure Service Bus Queue
+# Static web app invoking Azure functions
+
+Static web app built with the React framework. The [application](client/src/App.js) allows users to upload CSV files to a storage blob via an HTTP-triggered function.
+The uploaded files are then processed by a blob-triggered function, which stores the results in a separate container. Aforementioned functions
+are present in the [function_app.py](hvalfangst_function/function_app.py) python script - which is the main entrypoint of our Azure Function App instance.
+
+A pipeline has been set up to deploy the function app and the static web app to Azure using GitHub Actions. The pipeline is triggered by a push to the main branch or by manually running the workflow.
+
+
 
 ## Requirements
 
 - **Platform**: x86-64, Linux/WSL
-- **Programming Language**: [Python 3](https://www.python.org/downloads/)
+- **Programming Languages**: [React](https://reactjs.org/docs/getting-started.html), [Python 3](https://www.python.org/downloads/)
 - **Cloud Account**: [Azure](https://azure.microsoft.com/en-us/pricing/purchase-options/azure-account)
 - **Resource provisioning**: [Azure CLI](https://learn.microsoft.com/en-us/cli/azure/)
 
@@ -21,6 +29,7 @@ graph TD
     A --> B[Resource Group]
     B --> C[Storage Account]
     C --> D[Blob Container]
+    D -->|Static Website Hosting| H[index.html]
     B --> E[App Service Plan]
     E -->|Hosts| G[Function App]
     G -->|Uses| F[Application Insights]
@@ -32,24 +41,9 @@ graph TD
     B -->|Contains| F
 ```
 
-For this script to work it is necessary to have a configuration file named **infra_config.env** in your [infra](infra) directory. It contains sensitive information
-such as tenant and subscription id as well as information used to reference resources. The file has been added to our [.gitignore](.gitignore) so that you don't accidentally commit it.
-### Structure of 'infra/infra_config.env'
-```bash
-TENANT_ID={TO_BE_SET_BY_YOU_MY_FRIEND}
-SUBSCRIPTION_ID={TO_BE_SET_BY_YOU_MY_FRIEND}
-LOCATION=northeurope
-RESOURCE_GROUP_NAME=hvalfangstresourcegroup
-STORAGE_ACCOUNT_NAME=hvalfangststorageaccount
-BLOB_CONTAINER_NAME=hvalfangstblobcontainer
-FUNCTION_APP_NAME=hvalfangstfunctionapp
-SERVICE_PLAN_NAME=hvalfangstserviceplan
-APP_INSIGHTS_NAME=hvalfangstappinsights
-```
-
 ## Deallocate resources
 
-The shell script [deallocate_resources](infra/deallocate_resources.sh) deletes our Azure service bus queue, namespace and resource group.
+The shell script [deallocate_resources](infra/deallocate_resources.sh) deletes our Azure resources.
 
 # CI/CD
 
@@ -62,3 +56,5 @@ The associated values of the aforementioned secret can be retrieved from the Azu
 Click on the **Get publish profile** button and copy/paste the file content into the secret value field.
 
 ![img_1.png](img_1.png)
+
+

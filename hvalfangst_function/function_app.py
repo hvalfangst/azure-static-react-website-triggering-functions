@@ -1,8 +1,10 @@
-import logging
 import json
-import pandas as pd
-import azure.functions as func
+import logging
 from io import StringIO
+
+import azure.functions as func
+import jwt
+import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
 # Decree and declare our project as an Azure Function App subsidiary
@@ -60,10 +62,25 @@ def blob_trigger(inbound: func.InputStream, outbound: func.Out[str]):
         return f"Error: {str(e)}"
 
 
-@app.route(route="upload_csv", auth_level=func.AuthLevel.ANONYMOUS)
-@app.blob_output(arg_name="outbound", path="hvalfangstcontainer/in/input.csv", connection="")
+def validate_jwt(token: str, audience: str) -> bool:
+    try:
+        decoded = jwt.decode(token, audience=audience, options={"verify_signature": False})
+        # Optionally check claims like roles or scopes
+        return True
+    except Exception as e:
+        logging.error(f"JWT validation failed: {e}")
+        return False
+
+
+@app.route(route="upload_csv", auth_level=func.AuthLevel.FUNCTION)
+@app.blob_output(arg_name="outbound", path="hvalfangstcontainer/in/input.csv", connection="AzureWebJobsStorage")
 def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> str:
     try:
+
+        token = req.headers.get("Authorization").split(" ")[1]  # Extract Bearer token
+        if not validate_jwt(token, audience="61b4a548-3979-48df-b2df-37dc4e5e0e02"):
+            return func.HttpResponse("Unauthorized", status_code=401)
+
         logging.info("Received HTTP request to upload CSV")
 
         # Parse raw bytes derived from request body to string
