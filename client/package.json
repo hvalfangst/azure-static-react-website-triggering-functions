@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "@azure/msal-browser": "^3.28.0",
     "buffer": "^6.0.3",
     "cra-template": "1.2.0",
     "papaparse": "^5.4.1",
