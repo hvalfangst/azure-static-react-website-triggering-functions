@@ -68,7 +68,7 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
   properties: {
     serverFarmId: appServicePlan.id
     siteConfig: {
-      linuxFxVersion: 'Python|3.11'
+      linuxFxVersion: 'Python|3.10'
       appSettings: [
         {
           name: 'AzureWebJobsStorage'
@@ -93,6 +93,10 @@ resource functionApp 'Microsoft.Web/sites@2022-09-01' = {
         {
           name: 'ENABLE_ORYX_BUILD'
           value: 'true'
+        }
+        {
+          name: 'AzureWebJobsFeatureFlags'
+          value: 'EnableWorkerIndexing'
         }
       ]
     }

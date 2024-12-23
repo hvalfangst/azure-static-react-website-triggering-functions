@@ -1,18 +1,19 @@
-import json
 import logging
-from io import StringIO
-
 import azure.functions as func
 import jwt
+import json
 import pandas as pd
+from io import StringIO
 from sklearn.preprocessing import LabelEncoder
+import os
+
+from azure.functions import HttpResponse
 
 # Decree and declare our project as an Azure Function App subsidiary
 app = func.FunctionApp()
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 
 @app.blob_trigger(arg_name="inbound", path="hvalfangstcontainer/in/input.csv", connection="AzureWebJobsStorage")
@@ -72,13 +73,20 @@ def validate_jwt(token: str, audience: str) -> bool:
         return False
 
 
-@app.route(route="upload_csv", auth_level=func.AuthLevel.FUNCTION)
+@app.route(route="upload_csv", auth_level=func.AuthLevel.ANONYMOUS)
 @app.blob_output(arg_name="outbound", path="hvalfangstcontainer/in/input.csv", connection="AzureWebJobsStorage")
-def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> str:
+def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> HttpResponse:
     try:
+        logging.info("Received HTTP request to upload CSV")
 
-        token = req.headers.get("Authorization").split(" ")[1]  # Extract Bearer token
-        if not validate_jwt(token, audience="61b4a548-3979-48df-b2df-37dc4e5e0e02"):
+        # Validate JWT token
+        auth_header = req.headers.get("Authorization")
+
+        if not auth_header:
+            return func.HttpResponse("Missing auth header", status_code=401)
+
+        token = auth_header.split(" ")[1]  # Extract Bearer token
+        if not validate_jwt(token, audience=os.environ.get("FUNCTION_APP_CLIENT_ID")):
             return func.HttpResponse("Unauthorized", status_code=401)
 
         logging.info("Received HTTP request to upload CSV")
