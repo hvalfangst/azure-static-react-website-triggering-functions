@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 from io import StringIO
 
 import azure.functions as func
@@ -72,13 +73,13 @@ def validate_jwt(token: str, audience: str) -> bool:
         return False
 
 
-@app.route(route="upload_csv", auth_level=func.AuthLevel.FUNCTION)
+@app.route(route="upload_csv", auth_level=func.AuthLevel.ANONYMOUS)
 @app.blob_output(arg_name="outbound", path="hvalfangstcontainer/in/input.csv", connection="AzureWebJobsStorage")
 def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> str:
     try:
 
         token = req.headers.get("Authorization").split(" ")[1]  # Extract Bearer token
-        if not validate_jwt(token, audience="61b4a548-3979-48df-b2df-37dc4e5e0e02"):
+        if not validate_jwt(token, audience=os.environ.get("FUNCTION_APP_CLIENT_ID")):
             return func.HttpResponse("Unauthorized", status_code=401)
 
         logging.info("Received HTTP request to upload CSV")
