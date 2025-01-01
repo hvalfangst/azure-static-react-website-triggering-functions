@@ -1,4 +1,6 @@
 import logging
+from typing import List
+
 import azure.functions as func
 import jwt
 import json
@@ -63,10 +65,17 @@ def blob_trigger(inbound: func.InputStream, outbound: func.Out[str]):
         return f"Error: {str(e)}"
 
 
-def validate_jwt(token: str, audience: str) -> bool:
+def validate_jwt(token: str, audience: str, required_scopes: List[str]) -> bool:
     try:
         decoded = jwt.decode(token, audience=audience, options={"verify_signature": False})
-        # Optionally check claims like roles or scopes
+
+        # Check if the required scopes are present
+        token_scopes = decoded.get("scp", "").split(" ")
+        if not all(scope in token_scopes for scope in required_scopes):
+            logging.error(f"Required scopes {required_scopes} not found in token scopes {token_scopes}")
+            return False
+
+        logging.info("Required scopes found in token: %s", required_scopes)
         return True
     except Exception as e:
         logging.error(f"JWT validation failed: {e}")
@@ -86,10 +95,13 @@ def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> HttpResponse:
             return func.HttpResponse("Missing auth header", status_code=401)
 
         token = auth_header.split(" ")[1]  # Extract Bearer token
-        if not validate_jwt(token, audience=os.environ.get("FUNCTION_APP_CLIENT_ID")):
-            return func.HttpResponse("Unauthorized", status_code=401)
+        audience = os.environ.get("FUNCTION_APP_CLIENT_ID")
+        required_scopes = ["Csv.Write"]
 
-        logging.info("Received HTTP request to upload CSV")
+        if not validate_jwt(token, audience, required_scopes):
+            return HttpResponse("Unauthorized", status_code=401)
+
+        logging.info("Successfully validated JWT token")
 
         # Parse raw bytes derived from request body to string
         string_body = req.get_body().decode("utf-8")
