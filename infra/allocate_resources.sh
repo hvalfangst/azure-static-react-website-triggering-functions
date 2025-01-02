@@ -108,14 +108,150 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Set up app registration for function app
+
+# Set up app registration for the function app
 echo -e "${YELLOW}Setting up app registration for function app...${RESET}"
 FUNCTION_APP_CLIENT_ID=$(az ad app create \
   --display-name "hvalfangst-function-app" \
+  --identifier-uris "api://hvalfangst-function-app" \
   --query appId -o tsv)
-
 if [ $? -ne 0 ] || [ -z "$FUNCTION_APP_CLIENT_ID" ]; then
     echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
+    exit 1
+fi
+
+# Get the object ID of the app registration
+FUNCTION_APP_OBJECT_ID=$(az ad app show --id $FUNCTION_APP_CLIENT_ID --query id -o tsv)
+
+# Get an access token for the Microsoft Graph API to be used for patching app regs associated with function app and static website
+TOKEN=$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)
+if [ $? -ne 0 ] || [ -z "$TOKEN" ]; then
+    echo -e "${RED}Failed to get access token for Microsoft Graph API.${RESET}"
+    exit 1
+fi
+
+# Generate UUIDs for the permissions
+CSV_READER_UUID=$(python -c 'import uuid; print(str(uuid.uuid4()))')
+CSV_WRITER_UUID=$(python -c 'import uuid; print(str(uuid.uuid4()))')
+
+# Add permissions to the app registration by calling the Microsoft Graph API with a PATCH request
+echo -e "${YELLOW}Creating scopes for the Function App...${RESET}"
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+           \"api\": {
+               \"oauth2PermissionScopes\": [
+                   {
+                       \"id\": \"$CSV_READER_UUID\",
+                       \"adminConsentDescription\": \"Allows downloading of CSV files\",
+                       \"adminConsentDisplayName\": \"Allows downloading of CSV files\",
+                       \"isEnabled\": true,
+                       \"type\": \"Admin\",
+                       \"value\": \"Csv.Reader\"
+                   },
+                   {
+                       \"id\": \"$CSV_WRITER_UUID\",
+                       \"adminConsentDescription\": \"Allows uploading of CSV files\",
+                       \"adminConsentDisplayName\": \"Allows uploading of CSV files\",
+                       \"isEnabled\": true,
+                       \"type\": \"Admin\",
+                       \"value\": \"Csv.Writer\"
+                   }
+               ]
+           }
+       }" \
+     "https://graph.microsoft.com/v1.0/applications/$FUNCTION_APP_OBJECT_ID"
+
+# Set up app registration for the static web app
+echo -e "${YELLOW}Setting up app registration for static web app...${RESET}"
+app_registration=$(az ad app create \
+  --display-name "hvalfangst-static-web-app" \
+  --query '{objectId: id, appId: appId}' -o json)
+
+# Extract the object ID and client ID
+STATIC_WEB_APP_OBJECT_ID=$(echo $app_registration | jq -r '.objectId')
+STATIC_WEB_APP_CLIENT_ID=$(echo $app_registration | jq -r '.appId')
+
+if [ $? -ne 0 ] || [ -z "$STATIC_WEB_APP_OBJECT_ID" ] || [ -z "$STATIC_WEB_APP_CLIENT_ID" ]; then
+    echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
+    exit 1
+fi
+
+echo -e "${GREEN}Static Web App registration set up successfully.${RESET}"
+echo -e "${GREEN}Static Web App Object ID: $STATIC_WEB_APP_OBJECT_ID${RESET}"
+echo -e "${GREEN}Static Web App Client ID: $STATIC_WEB_APP_CLIENT_ID${RESET}"
+
+echo -e "${YELLOW}Setting redirect URIs for the static web app...${RESET}"
+az rest --method PATCH \
+  --uri "https://graph.microsoft.com/v1.0/applications/${STATIC_WEB_APP_OBJECT_ID}" \
+  --headers 'Content-Type=application/json' \
+  --body '{
+    "spa": {
+      "redirectUris": [
+        "http://localhost:3000",
+        "https://hvalfangststorageaccount.z6.web.core.windows.net"
+      ]
+    }
+  }'
+
+# Add permissions to the app registration associated with website by calling the Microsoft Graph API with a PATCH request
+echo -e "${YELLOW}Adding OpenID permissions for Microsoft Graph API to Static Website${RESET}"
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+           \"requiredResourceAccess\": [
+               {
+                   \"resourceAppId\": \"00000003-0000-0000-c000-000000000000\",
+                   \"resourceAccess\": [
+                       {
+                           \"id\": \"e1fe6dd8-ba31-4d61-89e7-88639da4683d\",
+                           \"type\": \"Scope\"
+                       },
+                       {
+                           \"id\": \"14dad69e-099b-42c9-810b-d002981feec1\",
+                           \"type\": \"Scope\"
+                       }
+                   ]
+               },
+               {
+                   \"resourceAppId\": \"$FUNCTION_APP_CLIENT_ID\",
+                   \"resourceAccess\": [
+                       {
+                           \"id\": \"$CSV_WRITER_UUID\",
+                           \"type\": \"Scope\"
+                       }
+                   ]
+               }
+           ]
+       }" \
+     "https://graph.microsoft.com/v1.0/applications/$STATIC_WEB_APP_OBJECT_ID"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to add permissions to the app registration associated with the static website.${RESET}"
+    exit 1
+fi
+
+# Add the static web app client ID as a pre-authorized client
+echo -e "${YELLOW}Adding Static Web App as a pre-authorized client...${RESET}"
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+           \"api\": {
+               \"preAuthorizedApplications\": [
+                   {
+                       \"appId\": \"$STATIC_WEB_APP_CLIENT_ID\",
+                       \"delegatedPermissionIds\": [
+                           \"$CSV_READER_UUID\",
+                           \"$CSV_WRITER_UUID\"
+                       ]
+                   }
+               ]
+           }
+       }" \
+     "https://graph.microsoft.com/v1.0/applications/$FUNCTION_APP_OBJECT_ID"
+
+if [ $? -ne 0 ]; then
+    echo -e "${RED}Failed to add the static web app as a pre-authorized client.${RESET}"
     exit 1
 fi
 
@@ -127,17 +263,6 @@ az functionapp config appsettings set \
     --settings TENANT_ID=${TENANT_ID} FUNCTION_APP_CLIENT_ID=${FUNCTION_APP_CLIENT_ID}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to set up app settings for function app.${RESET}"
-    exit 1
-fi
-
-# Set up app registration for the static web app
-echo -e "${YELLOW}Setting up app registration for static web app...${RESET}"
-STATIC_WEB_APP_CLIENT_ID=$(az ad app create \
-  --display-name "hvalfangst-static-web-app" \
-  --query appId -o tsv)
-
-if [ $? -ne 0 ] || [ -z "STATIC_WEB_APP_CLIENT_ID" ]; then
-    echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
     exit 1
 fi
 

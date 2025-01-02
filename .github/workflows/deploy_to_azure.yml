@@ -89,6 +89,9 @@ jobs:
       - name: Build React app
         run: npm run build
         working-directory: ./client
+        env:
+          REACT_APP_STATIC_WEB_APP_CLIENT_ID: ${{ secrets.STATIC_WEB_APP_CLIENT_ID }}
+          REACT_APP_AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
 
       - name: Zip build folder
         run: zip -r build.zip ./client/build
@@ -117,7 +120,7 @@ jobs:
       - name: Login to Azure with OIDC
         uses: azure/login@v2
         with:
-          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          client-id: ${{ secrets.AZURE_GITHUB_SP_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
