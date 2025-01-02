@@ -6,6 +6,9 @@ Once the CSV has been uploaded to the storage blob, another, blob-triggered Azur
 The computed statistics are then stored in a new blob container, which is used to serve the results to the user.
 These two functions are defined in the python script [function_app.py](hvalfangst_function/function_app.py) - which is the main entrypoint of our Azure Function App instance.
 
+The SPA is protected with Oauth2.0 authorization code flow with PKCE and OIDC. The user is redirected to the Azure AD login page, where they must authenticate before being redirected back to the SPA.
+
+
 The associated Azure infrastructure is deployed with a script (more on that below).
 
 A branch-triggered pipeline has been set up to deploy our code to the respective Azure resources using a GitHub Actions Workflows [script](.github/workflows/deploy_to_azure.yml). 
@@ -24,7 +27,7 @@ Thus, deploying the website is simply a matter of uploading the static files to 
 
 ## Allocate resources
 
-The shell script [allocate_resources](infra/allocate_resources.sh) creates Azure resources using the Azure CLI and a
+The shell script [allocate_resources](infra/allocate_resources.sh) creates Azure resources using the Azure CLI in conjunction with a
 [Bicep](https://learn.microsoft.com/en-us/azure/azure-resource-manager/bicep/overview?tabs=bicep) template [file](infra/main.bicep). 
 
 It will create the following hierarchy of resources:
@@ -56,4 +59,13 @@ As may be observed in the [script](.github/workflows/deploy_to_azure.yml), these
 - **AZURE_TENANT_ID**: Used to authenticate the service principal in order to deploy the static web app
 - **PUBLISH_PROFILE**: Used to deploy our two functions to the Azure Function App
 
-![img_1.png](images/img_1.png)
+![secrets.png](images/secrets.png)
+
+## Usage
+After provisioning resources, setting up secrets, and pushing the code to the repository, one
+may access the static web app by navigating to the following URL:
+
+```plaintext
+https://<storage_account_name>.z6.web.core.windows.net
+```
+

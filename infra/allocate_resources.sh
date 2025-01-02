@@ -108,16 +108,95 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
-# Set up app registration for function app
+
+# Set up app registration for the function app
 echo -e "${YELLOW}Setting up app registration for function app...${RESET}"
 FUNCTION_APP_CLIENT_ID=$(az ad app create \
   --display-name "hvalfangst-function-app" \
+  --identifier-uris "api://hvalfangst-function-app" \
   --query appId -o tsv)
-
 if [ $? -ne 0 ] || [ -z "$FUNCTION_APP_CLIENT_ID" ]; then
     echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
     exit 1
 fi
+
+# Get the object ID of the app registration
+FUNCTION_APP_OBJECT_ID=$(az ad app show --id $FUNCTION_APP_CLIENT_ID --query id -o tsv)
+
+# Get an access token for the Microsoft Graph API
+TOKEN=$(az account get-access-token --resource https://graph.microsoft.com --query accessToken -o tsv)
+if [ $? -ne 0 ] || [ -z "$TOKEN" ]; then
+    echo -e "${RED}Failed to get access token for Microsoft Graph API.${RESET}"
+    exit 1
+fi
+
+# Generate UUIDs for the permissions
+CSV_READER_UUID=$(python -c 'import uuid; print(str(uuid.uuid4()))')
+CSV_WRITER_UUID=$(python -c 'import uuid; print(str(uuid.uuid4()))')
+
+# Add permissions to the app registration by calling the Microsoft Graph API with a PATCH request
+echo -e "${YELLOW}Creating scopes for the Function App...${RESET}"
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+           \"api\": {
+               \"oauth2PermissionScopes\": [
+                   {
+                       \"id\": \"$CSV_READER_UUID\",
+                       \"adminConsentDescription\": \"Allows downloading of CSV files\",
+                       \"adminConsentDisplayName\": \"Allows downloading of CSV files\",
+                       \"isEnabled\": true,
+                       \"type\": \"Admin\",
+                       \"value\": \"Csv.Reader\"
+                   },
+                   {
+                       \"id\": \"$CSV_WRITER_UUID\",
+                       \"adminConsentDescription\": \"Allows uploading of CSV files\",
+                       \"adminConsentDisplayName\": \"Allows uploading of CSV files\",
+                       \"isEnabled\": true,
+                       \"type\": \"Admin\",
+                       \"value\": \"Csv.Writer\"
+                   }
+               ]
+           }
+       }" \
+     "https://graph.microsoft.com/v1.0/applications/$FUNCTION_APP_OBJECT_ID"
+
+# Set up app registration for the static web app
+echo -e "${YELLOW}Setting up app registration for static web app...${RESET}"
+STATIC_WEB_APP_CLIENT_ID=$(az ad app create \
+  --display-name "hvalfangst-static-web-app" \
+  --web-redirect-uris "http://localhost:3000" \
+  --query appId -o tsv)
+if [ $? -ne 0 ] || [ -z "STATIC_WEB_APP_CLIENT_ID" ]; then
+    echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
+    exit 1
+fi
+
+STATIC_WEB_APP_OBJECT_ID=$(az ad app show --id $STATIC_WEB_APP_CLIENT_ID --query id -o tsv)
+if [ $? -ne 0 ] || [ -z "$STATIC_WEB_APP_OBJECT_ID" ]; then
+    echo -e "${RED}Failed to retrieve the object ID of the static web app registration.${RESET}"
+    exit 1
+fi
+
+# Add permissions to the app registration by calling the Microsoft Graph API with a PATCH request
+echo -e "${YELLOW}Assigning permissions from Function App to Static Website${RESET}"
+curl -X PATCH -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d "{
+           \"requiredResourceAccess\": [
+               {
+                   \"resourceAppId\": \"$FUNCTION_APP_CLIENT_ID\",
+                   \"resourceAccess\": [
+                       {
+                           \"id\": \"$CSV_WRITER_UUID\",
+                           \"type\": \"Scope\"
+                       }
+                   ]
+               }
+           ]
+       }" \
+     "https://graph.microsoft.com/v1.0/applications/$STATIC_WEB_APP_OBJECT_ID"
 
 # Set up app settings for the function app
 echo -e "${YELLOW}Setting up app settings for function app...${RESET}"
@@ -127,17 +206,6 @@ az functionapp config appsettings set \
     --settings TENANT_ID=${TENANT_ID} FUNCTION_APP_CLIENT_ID=${FUNCTION_APP_CLIENT_ID}
 if [ $? -ne 0 ]; then
     echo -e "${RED}Failed to set up app settings for function app.${RESET}"
-    exit 1
-fi
-
-# Set up app registration for the static web app
-echo -e "${YELLOW}Setting up app registration for static web app...${RESET}"
-STATIC_WEB_APP_CLIENT_ID=$(az ad app create \
-  --display-name "hvalfangst-static-web-app" \
-  --query appId -o tsv)
-
-if [ $? -ne 0 ] || [ -z "STATIC_WEB_APP_CLIENT_ID" ]; then
-    echo -e "${RED}Failed to set up app registration or retrieve the app ID.${RESET}"
     exit 1
 fi
 
