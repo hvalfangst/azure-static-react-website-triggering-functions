@@ -1,0 +1,50 @@
+Name,Income,City,Gender,Occupation,Experience
+Alice,75000,New York,Female,Data Scientist,3
+Bob,60000,San Francisco,Male,Software Engineer,5
+Charlie,80000,Los Angeles,Male,Marketing Specialist,7
+David,55000,Chicago,Male,Teacher,8
+Emma,90000,Boston,Female,Financial Analyst,4
+Frank,72000,Miami,Male,Graphic Designer,6
+Grace,68000,Dallas,Female,Project Manager,9
+Hank,85000,Seattle,Male,Product Manager,5
+Ivy,60000,Austin,Female,Software Developer,3
+Jack,75000,Denver,Male,UX/UI Designer,6
+Kelly,70000,Atlanta,Female,HR Manager,8
+Leo,82000,Phoenix,Male,Data Analyst,4
+Mia,58000,Portland,Female,Marketing Coordinator,2
+Nate,95000,San Diego,Male,Software Architect,10
+Olivia,67000,Minneapolis,Female,Research Scientist,6
+Paul,72000,Philadelphia,Male,Content Writer,7
+Quinn,80000,Detroit,Female,Operations Manager,8
+Ryan,60000,Tampa,Male,IT Specialist,4
+Sara,88000,Houston,Female,Financial Planner,6
+Tom,64000,Charlotte,Male,UX/UI Developer,5
+Ursula,77000,Raleigh,Female,Software Tester,3
+Victor,71000,Indianapolis,Male,Marketing Manager,8
+Wendy,83000,Columbus,Female,Product Designer,6
+Xander,69000,San Antonio,Male,Project Coordinator,2
+Yara,78000,Memphis,Female,Data Engineer,5
+Zack,62000,New Orleans,Male,HR Specialist,4
+Abby,74000,Orlando,Female,IT Consultant,7
+Brent,90000,Salt Lake City,Male,Financial Controller,9
+Cathy,56000,Kansas City,Female,Teacher Assistant,3
+Derek,80000,St. Louis,Male,Marketing Analyst,6
+Ella,68000,Pittsburgh,Female,Software Support Specialist,4
+Finn,76000,Cleveland,Male,Operations Analyst,5
+Gina,63000,Cincinnati,Female,Product Analyst,3
+Henry,85000,Oklahoma City,Male,Data Architect,8
+Iris,71000,Milwaukee,Female,UX/UI Analyst,6
+Jake,89000,Las Vegas,Male,Software Manager,7
+Karen,67000,Sacramento,Female,Project Analyst,4
+Liam,72000,Albuquerque,Male,Financial Advisor,6
+Megan,80000,Tucson,Female,HR Generalist,7
+Noah,59000,Fresno,Male,Marketing Assistant,3
+Olivia,83000,El Paso,Female,Software Tester,5
+Parker,69000,Long Beach,Male,Data Analyst,4
+Quinn,78000,Virginia Beach,Female,Product Manager,6
+Ryan,65000,Oakland,Male,Marketing Coordinator,3
+Sophie,76000,Mesa,Female,Software Developer,5
+Tyler,82000,Colorado Springs,Male,Project Manager,7
+Ursula,69000,Arlington,Female,Data Scientist,4
+Vincent,77000,Wichita,Male,Financial Analyst,6
+Wendy,61000,Bakersfield,Female,Marketing Specialist,3

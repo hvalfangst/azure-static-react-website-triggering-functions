@@ -96,7 +96,7 @@ def upload_csv(req: func.HttpRequest, outbound: func.Out[str]) -> HttpResponse:
 
         token = auth_header.split(" ")[1]  # Extract Bearer token
         audience = os.environ.get("FUNCTION_APP_CLIENT_ID")
-        required_scopes = ["Csv.Write"]
+        required_scopes = ["Csv.Writer"]
 
         if not validate_jwt(token, audience, required_scopes):
             return HttpResponse("Unauthorized", status_code=401)
